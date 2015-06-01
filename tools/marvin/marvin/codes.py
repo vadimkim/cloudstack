@@ -55,6 +55,8 @@ Snapshot States - END
 RECURRING = "RECURRING"
 ENABLED = "Enabled"
 DISABLED = "Disabled"
+ENABLE = "Enable"
+DISABLE = "Disable"
 NETWORK_OFFERING = "network_offering"
 ROOT = "ROOT"
 INVALID_INPUT = "INVALID INPUT"
@@ -133,3 +135,16 @@ STORAGE_TRAFFIC = "storage"
 Switch Type
 '''
 VMWAREDVS = "vmwaredvs"
+
+'''
+Storage Pools State
+'''
+
+UP = "up"
+
+'''
+Storage Pools Scope
+'''
+
+CLUSTER = "cluster"
+
