@@ -56,7 +56,7 @@ class serviceCfgBase(object):
             if self.syscfg.env.mode == "Server":
                 raise CloudRuntimeException("Configure %s failed, Please check the /var/log/cloudstack/setupManagement.log for detail"%self.serviceName)
             else:
-                raise CloudRuntimeException("Configure %s failed, Please check the /var/log/cloudstack/setupAgent.log for detail"%self.serviceName)
+                raise CloudRuntimeException("Configure %s failed, Please check the /var/log/cloudstack/agent/setup.log for detail"%self.serviceName)
 
     def backup(self):
         if self.status is None:
@@ -428,7 +428,7 @@ class securityPolicyConfigUbuntu(serviceCfgBase):
 
             return True
         except:
-            raise CloudRuntimeException("Failed to configure apparmor, please see the /var/log/cloudstack/setupAgent.log for detail, \
+            raise CloudRuntimeException("Failed to configure apparmor, please see the /var/log/cloudstack/agent/setup.log for detail, \
                                         or you can manually disable it before starting myCloud")
 
     def restore(self):
@@ -458,7 +458,7 @@ class securityPolicyConfigRedhat(serviceCfgBase):
                 cfo.replace_line("SELINUX=", "SELINUX=permissive")
                 return True
             except:
-                raise CloudRuntimeException("Failed to configure selinux, please see the /var/log/cloudstack/setupAgent.log for detail, \
+                raise CloudRuntimeException("Failed to configure selinux, please see the /var/log/cloudstack/agent/setup.log for detail, \
                                             or you can manually disable it before starting myCloud")
         else:
             return True
@@ -493,7 +493,6 @@ class libvirtConfigRedhat(serviceCfgBase):
             filename = "/etc/libvirt/qemu.conf"
 
             cfo = configFileOps(filename, self)
-            cfo.addEntry("cgroup_controllers", "[\"cpu\"]")
             cfo.addEntry("security_driver", "\"none\"")
             cfo.addEntry("user", "\"root\"")
             cfo.addEntry("group", "\"root\"")
@@ -717,24 +716,6 @@ class cloudAgentConfig(serviceCfgBase):
             return self.configMyCloud()
         elif self.syscfg.env.agentMode == "console":
             return self.configConsole()
-
-    def restore(self):
-        return True
-
-
-class sudoersConfig(serviceCfgBase):
-    def __init__(self, syscfg):
-        super(sudoersConfig, self).__init__(syscfg)
-        self.serviceName = "sudoers"
-    def config(self):
-        try:
-            cfo = configFileOps("/etc/sudoers", self)
-            cfo.addEntry("cloud ALL ", "NOPASSWD : /bin/chmod, /bin/cp, /bin/mkdir, /bin/mount, /bin/umount, /usr/bin/keytool")
-            cfo.rmEntry("Defaults", "requiretty", " ")
-            cfo.save()
-            return True
-        except:
-            raise
 
     def restore(self):
         return True

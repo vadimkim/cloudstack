@@ -127,6 +127,7 @@ import com.cloud.agent.api.SecurityGroupRulesCmd.IpPortAndProto;
 import com.cloud.agent.api.StartCommand;
 import com.cloud.agent.api.StopCommand;
 import com.cloud.agent.api.UnPlugNicCommand;
+import com.cloud.agent.api.UpdateHostPasswordCommand;
 import com.cloud.agent.api.UpgradeSnapshotCommand;
 import com.cloud.agent.api.VmStatsEntry;
 import com.cloud.agent.api.check.CheckSshCommand;
@@ -167,6 +168,7 @@ import com.cloud.storage.template.TemplateLocation;
 import com.cloud.template.VirtualMachineTemplate.BootloaderType;
 import com.cloud.utils.Pair;
 import com.cloud.utils.exception.CloudRuntimeException;
+import com.cloud.utils.script.Script;
 import com.cloud.vm.DiskProfile;
 import com.cloud.vm.VirtualMachine;
 import com.cloud.vm.VirtualMachine.PowerState;
@@ -1205,13 +1207,10 @@ public class LibvirtComputingResourceTest {
         verify(vm, times(1)).getNics();
     }
 
-    @Test(expected = UnsatisfiedLinkError.class)
+    @Test
     public void testMigrateCommand() {
-        // The Connect constructor used inside the LibvirtMigrateCommandWrapper has a call to native methods, which
-        // makes difficult to test it now.
-        // Will keep it expecting the UnsatisfiedLinkError and fix later.
-
         final Connect conn = Mockito.mock(Connect.class);
+        final Connect dconn = Mockito.mock(Connect.class);
         final LibvirtUtilitiesHelper libvirtUtilitiesHelper = Mockito.mock(LibvirtUtilitiesHelper.class);
 
         final String vmName = "Test";
@@ -1225,6 +1224,8 @@ public class LibvirtComputingResourceTest {
         when(libvirtComputingResource.getLibvirtUtilitiesHelper()).thenReturn(libvirtUtilitiesHelper);
         try {
             when(libvirtUtilitiesHelper.getConnectionByVmName(vmName)).thenReturn(conn);
+            when(libvirtUtilitiesHelper.retrieveQemuConnection("qemu+tcp://" + command.getDestinationIp() + "/system")).thenReturn(dconn);
+
         } catch (final LibvirtException e) {
             fail(e.getMessage());
         }
@@ -1245,7 +1246,7 @@ public class LibvirtComputingResourceTest {
             when(conn.domainLookupByName(vmName)).thenReturn(dm);
 
             when(libvirtComputingResource.getPrivateIp()).thenReturn("127.0.0.1");
-            when(dm.getXMLDesc(0)).thenReturn("host_domain");
+            when(dm.getXMLDesc(8)).thenReturn("host_domain");
             when(dm.isPersistent()).thenReturn(1);
             doNothing().when(dm).undefine();
 
@@ -1259,11 +1260,12 @@ public class LibvirtComputingResourceTest {
         assertNotNull(wrapper);
 
         final Answer answer = wrapper.execute(command, libvirtComputingResource);
-        assertFalse(answer.getResult());
+        assertTrue(answer.getResult());
 
         verify(libvirtComputingResource, times(1)).getLibvirtUtilitiesHelper();
         try {
             verify(libvirtUtilitiesHelper, times(1)).getConnectionByVmName(vmName);
+            verify(libvirtUtilitiesHelper, times(1)).retrieveQemuConnection("qemu+tcp://" + command.getDestinationIp() + "/system");
         } catch (final LibvirtException e) {
             fail(e.getMessage());
         }
@@ -1272,7 +1274,7 @@ public class LibvirtComputingResourceTest {
         verify(libvirtComputingResource, times(1)).getDisks(conn, vmName);
         try {
             verify(conn, times(1)).domainLookupByName(vmName);
-            verify(dm, times(1)).getXMLDesc(0);
+            verify(dm, times(1)).getXMLDesc(8);
         } catch (final LibvirtException e) {
             fail(e.getMessage());
         }
@@ -5071,5 +5073,55 @@ public class LibvirtComputingResourceTest {
         } catch (final LibvirtException e) {
             fail(e.getMessage());
         }
+    }
+
+    @Test
+    public void testUpdateHostPasswordCommand() {
+        final LibvirtUtilitiesHelper libvirtUtilitiesHelper = Mockito.mock(LibvirtUtilitiesHelper.class);
+        final Script script = Mockito.mock(Script.class);
+
+        final String hostIp = "127.0.0.1";
+        final String username = "root";
+        final String newPassword = "password";
+
+        final UpdateHostPasswordCommand command = new UpdateHostPasswordCommand(username, newPassword, hostIp);
+
+        when(libvirtComputingResource.getLibvirtUtilitiesHelper()).thenReturn(libvirtUtilitiesHelper);
+        when(libvirtComputingResource.getUpdateHostPasswdPath()).thenReturn("/tmp");
+        when(libvirtUtilitiesHelper.buildScript(libvirtComputingResource.getUpdateHostPasswdPath())).thenReturn(script);
+
+        when(script.execute()).thenReturn(null);
+
+        final LibvirtRequestWrapper wrapper = LibvirtRequestWrapper.getInstance();
+        assertNotNull(wrapper);
+
+        final Answer answer = wrapper.execute(command, libvirtComputingResource);
+
+        assertTrue(answer.getResult());
+    }
+
+    @Test
+    public void testUpdateHostPasswordCommandFail() {
+        final LibvirtUtilitiesHelper libvirtUtilitiesHelper = Mockito.mock(LibvirtUtilitiesHelper.class);
+        final Script script = Mockito.mock(Script.class);
+
+        final String hostIp = "127.0.0.1";
+        final String username = "root";
+        final String newPassword = "password";
+
+        final UpdateHostPasswordCommand command = new UpdateHostPasswordCommand(username, newPassword, hostIp);
+
+        when(libvirtComputingResource.getLibvirtUtilitiesHelper()).thenReturn(libvirtUtilitiesHelper);
+        when(libvirtComputingResource.getUpdateHostPasswdPath()).thenReturn("/tmp");
+        when(libvirtUtilitiesHelper.buildScript(libvirtComputingResource.getUpdateHostPasswdPath())).thenReturn(script);
+
+        when(script.execute()).thenReturn("#FAIL");
+
+        final LibvirtRequestWrapper wrapper = LibvirtRequestWrapper.getInstance();
+        assertNotNull(wrapper);
+
+        final Answer answer = wrapper.execute(command, libvirtComputingResource);
+
+        assertFalse(answer.getResult());
     }
 }

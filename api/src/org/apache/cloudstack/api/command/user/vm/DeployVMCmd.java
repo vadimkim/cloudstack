@@ -506,7 +506,7 @@ public class DeployVMCmd extends BaseAsyncCreateCustomIdCmd {
 
         try {
             if (minIops != null) {
-                lMinIops = Long.valueOf(minIops);
+                lMinIops = Long.parseLong(minIops);
             }
             else {
                 lMinIops = 0;
@@ -520,7 +520,7 @@ public class DeployVMCmd extends BaseAsyncCreateCustomIdCmd {
 
         try {
             if (maxIops != null) {
-                lMaxIops = Long.valueOf(maxIops);
+                lMaxIops = Long.parseLong(maxIops);
             }
             else {
                 lMaxIops = 0;

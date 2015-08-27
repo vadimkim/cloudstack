@@ -1212,7 +1212,7 @@ public class VolumeApiServiceImpl extends ManagerBase implements VolumeApiServic
         }
 
         try {
-            if (volume.getState() != Volume.State.Destroy && volume.getState() != Volume.State.Expunging && volume.getState() != Volume.State.Expunging) {
+            if (volume.getState() != Volume.State.Destroy && volume.getState() != Volume.State.Expunging && volume.getState() != Volume.State.Expunged) {
                 Long instanceId = volume.getInstanceId();
                 if (!volService.destroyVolume(volume.getId())) {
                     return false;
@@ -2469,6 +2469,8 @@ public class VolumeApiServiceImpl extends ManagerBase implements VolumeApiServic
                     _volsDao.update(volumeToAttach.getId(), volumeToAttach);
                 }
             } else {
+                deviceId = getDeviceId(vm.getId(), deviceId);
+
                 _volsDao.attachVolume(volumeToAttach.getId(), vm.getId(), deviceId);
             }
 

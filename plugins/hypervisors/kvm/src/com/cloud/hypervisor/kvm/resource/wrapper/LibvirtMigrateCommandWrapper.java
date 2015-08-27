@@ -83,10 +83,14 @@ public final class LibvirtMigrateCommandWrapper extends CommandWrapper<MigrateCo
                 description for the instance to be used on the target host.
 
                 This is supported by libvirt-java from version 0.50.0
-             */
-            xmlDesc = dm.getXMLDesc(0).replace(libvirtComputingResource.getPrivateIp(), command.getDestinationIp());
 
-            dconn = new Connect("qemu+tcp://" + command.getDestinationIp() + "/system");
+                CVE-2015-3252: Get XML with sensitive information suitable for migration by using
+                               VIR_DOMAIN_XML_MIGRATABLE flag (value = 8)
+                               https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainXMLFlags
+             */
+            xmlDesc = dm.getXMLDesc(8).replace(libvirtComputingResource.getPrivateIp(), command.getDestinationIp());
+
+            dconn = libvirtUtilitiesHelper.retrieveQemuConnection("qemu+tcp://" + command.getDestinationIp() + "/system");
 
             //run migration in thread so we can monitor it
             s_logger.info("Live migration of instance " + vmName + " initiated");

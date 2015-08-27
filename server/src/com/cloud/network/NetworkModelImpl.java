@@ -34,13 +34,11 @@ import javax.ejb.Local;
 import javax.inject.Inject;
 import javax.naming.ConfigurationException;
 
-import com.cloud.utils.StringUtils;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.log4j.Logger;
-
 import org.apache.cloudstack.acl.ControlledEntity.ACLType;
 import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
 import org.apache.cloudstack.lb.dao.ApplicationLoadBalancerRuleDao;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.log4j.Logger;
 
 import com.cloud.api.ApiDBUtils;
 import com.cloud.configuration.Config;
@@ -105,6 +103,7 @@ import com.cloud.user.AccountManager;
 import com.cloud.user.AccountVO;
 import com.cloud.user.DomainManager;
 import com.cloud.user.dao.AccountDao;
+import com.cloud.utils.StringUtils;
 import com.cloud.utils.component.AdapterBase;
 import com.cloud.utils.component.ManagerBase;
 import com.cloud.utils.db.DB;
@@ -827,15 +826,15 @@ public class NetworkModelImpl extends ManagerBase implements NetworkModel {
     @Override
     public String getIpInNetwork(long vmId, long networkId) {
         Nic guestNic = getNicInNetwork(vmId, networkId);
-        assert (guestNic != null && guestNic.getIp4Address() != null) : "Vm doesn't belong to network associated with " + "ipAddress or ip4 address is null";
-        return guestNic.getIp4Address();
+        assert (guestNic != null && guestNic.getIPv4Address() != null) : "Vm doesn't belong to network associated with " + "ipAddress or ip4 address is null";
+        return guestNic.getIPv4Address();
     }
 
     @Override
     public String getIpInNetworkIncludingRemoved(long vmId, long networkId) {
         Nic guestNic = getNicInNetworkIncludingRemoved(vmId, networkId);
-        assert (guestNic != null && guestNic.getIp4Address() != null) : "Vm doesn't belong to network associated with " + "ipAddress or ip4 address is null";
-        return guestNic.getIp4Address();
+        assert (guestNic != null && guestNic.getIPv4Address() != null) : "Vm doesn't belong to network associated with " + "ipAddress or ip4 address is null";
+        return guestNic.getIPv4Address();
     }
 
     @Override
@@ -942,7 +941,7 @@ public class NetworkModelImpl extends ManagerBase implements NetworkModel {
         NicVO networkElementNic = _nicDao.findByNetworkIdAndType(virtualNetwork.getId(), Type.DomainRouter);
 
         if (networkElementNic != null) {
-            return networkElementNic.getIp4Address();
+            return networkElementNic.getIPv4Address();
         } else {
             s_logger.warn("Unable to set find network element for the network id=" + virtualNetwork.getId());
             return null;
@@ -2195,20 +2194,20 @@ public class NetworkModelImpl extends ManagerBase implements NetworkModel {
     public NicVO getPlaceholderNicForRouter(Network network, Long podId) {
         List<NicVO> nics = _nicDao.listPlaceholderNicsByNetworkIdAndVmType(network.getId(), VirtualMachine.Type.DomainRouter);
         for (NicVO nic : nics) {
-            if (nic.getReserver() == null && (nic.getIp4Address() != null || nic.getIp6Address() != null)) {
+            if (nic.getReserver() == null && (nic.getIPv4Address() != null || nic.getIPv6Address() != null)) {
                 if (podId == null) {
                     return nic;
                 } else {
                     //return nic only when its ip address belong to the pod range (for the Basic zone case)
                     List<? extends Vlan> vlans = _vlanDao.listVlansForPod(podId);
                     for (Vlan vlan : vlans) {
-                        if (nic.getIp4Address() != null) {
-                            IpAddress ip = _ipAddressDao.findByIpAndSourceNetworkId(network.getId(), nic.getIp4Address());
+                        if (nic.getIPv4Address() != null) {
+                            IpAddress ip = _ipAddressDao.findByIpAndSourceNetworkId(network.getId(), nic.getIPv4Address());
                             if (ip != null && ip.getVlanId() == vlan.getId()) {
                                 return nic;
                             }
                         } else {
-                            UserIpv6AddressVO ipv6 = _ipv6Dao.findByNetworkIdAndIp(network.getId(), nic.getIp6Address());
+                            UserIpv6AddressVO ipv6 = _ipv6Dao.findByNetworkIdAndIp(network.getId(), nic.getIPv6Address());
                             if (ipv6 != null && ipv6.getVlanId() == vlan.getId()) {
                                 return nic;
                             }
@@ -2292,7 +2291,7 @@ public class NetworkModelImpl extends ManagerBase implements NetworkModel {
         final List<String[]> vmData = new ArrayList<String[]>();
 
         if (userData != null) {
-            vmData.add(new String[]{"userdata", "user-data", new String(Base64.decodeBase64(userData.getBytes()))});
+            vmData.add(new String[]{"userdata", "user-data", new String(Base64.decodeBase64(userData),StringUtils.getPreferredCharset())});
         }
         vmData.add(new String[]{"metadata", "service-offering", StringUtils.unicodeEscape(serviceOffering)});
         vmData.add(new String[]{"metadata", "availability-zone", StringUtils.unicodeEscape(zoneName)});
@@ -2323,7 +2322,7 @@ public class NetworkModelImpl extends ManagerBase implements NetworkModel {
                     throw new CloudRuntimeException("Unable to get MD5 MessageDigest", e);
                 }
                 md5.reset();
-                md5.update(password.getBytes());
+                md5.update(password.getBytes(StringUtils.getPreferredCharset()));
                 byte[] digest = md5.digest();
                 BigInteger bigInt = new BigInteger(1, digest);
                 String hashtext = bigInt.toString(16);
